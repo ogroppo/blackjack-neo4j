@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "dotenv": "^8.2.0",
-    "fluent-neo4j": "^0.4.4",
+    "fluent-neo4j": "^0.4.4"
   },
   "scripts": {
     "setup": "node setup.js",
