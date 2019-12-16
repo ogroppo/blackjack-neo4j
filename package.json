@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "ava": "^2.4.0",
     "dotenv": "^8.2.0",
     "fluent-neo4j": "^0.4.4"
   },
   "scripts": {
     "setup": "node setup.js",
-    "cheat": "node cheat.js"
+    "cheat": "node cheat.js",
+    "test": "ava"
   },
   "eslintConfig": {
     "extends": "react-app"

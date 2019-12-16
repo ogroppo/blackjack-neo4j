@@ -8,4 +8,6 @@ module.exports = async function reset(){
   .optionalMatch({$: 'DealerScore', label: 'DealerScore'})
   .detachDelete('Card, PlayerScore, DealerScore')
   .run()
+
+  console.log("Reset done");
 }

@@ -3,7 +3,7 @@ const Neo4jQuery = require('fluent-neo4j')
 const nextValueCase = require('./nextValueCase')
 const nextTypeCase = require('./nextTypeCase')
 
-module.exports = async function player(){
+async function player(){
   try{
     await new Neo4jQuery()
     .merge({label: 'PlayerScore', value: 0, type: 'hard'})
@@ -28,7 +28,7 @@ module.exports = async function player(){
         nextTypeCase,
         'card',
         'score',
-        'false as splittable'
+        '0 as splittable'
       )
 
       if(cards === 2)
@@ -36,12 +36,12 @@ module.exports = async function player(){
           `(CASE
             WHEN nextValue = 21
               THEN 'blackJack'
-            ELSE type
+            ELSE nextType
           END) as nextType`,
           `(CASE
             WHEN score.value = card.value
-              THEN true
-            ELSE false
+              THEN card.value
+            ELSE 0
           END) as splittable`,
           'nextValue', 
           'card',
@@ -61,31 +61,25 @@ module.exports = async function player(){
         {$: 'r', type: 'player', move: 'hit', value: '$card.value', p: '$card.p'},
         {$: 'nextScore'}
       ])
-      .return('count(r) as count')
+      .return('count(nextScore) as count')
 
-      addedScores = await q.fetchRow('count')
+      addedScores = await q.fetchRows('count')
+      
     }while(addedScores > 0)
 
     //Splits
     await new Neo4jQuery()
-    .match({$: 'score', label: 'PlayerScore', splittable: true})
-    .with(
-      `(CASE
-        WHEN score.type = 'soft'
-          THEN 11
-        ELSE score.value / 2
-      END) as splitCardValue`,
-      'score'
-    )
+    .match({$: 'score', label: 'PlayerScore'})
+    .where({$: 'score', splittable: {'>': 0}})
     .match({$: 'card', label: 'Card'})
     .with(
       `(CASE
-        WHEN splitCardValue + card.value > 21
-          THEN splitCardValue + card.value - 10
-        ELSE splitCardValue + card.value
+        WHEN score.splittable + card.value > 21
+          THEN score.splittable + card.value - 10
+        ELSE score.splittable + card.value
       END) as nextValue`,
       `(CASE
-        WHEN splitCardValue = 11
+        WHEN score.splittable = 11
           THEN 'aceSplit' 
         WHEN card.value = 11
           THEN 'soft'
@@ -99,7 +93,7 @@ module.exports = async function player(){
       label: 'PlayerScore', 
       value: "$nextValue", 
       type: '$nextType', //if type: aceSplit it will not continue in the hit tree
-      splittable: false, //allow one split only allowed
+      splittable: 0, //allow one split only allowed
       withCards: 2 //e.g. allow to double
     }) 
     .merge([
@@ -109,7 +103,52 @@ module.exports = async function player(){
     ])
     .run()
 
+    //Cover new scores created by split
+    let addedHitRels
+    do{
+      const q = new Neo4jQuery()
+      .match({$: 'score', label: 'PlayerScore'})
+      .where(
+        {$: 'score', value: {'<=': 21}}, 
+        'AND NOT',
+        {$: 'score', type: 'blackJack'},
+        'AND NOT',
+        {$: 'score', type: 'aceSplit'},
+        'AND NOT',
+        [{$: 'score'}, {type: 'player'}, {}]
+      )
+      .match({$: 'card', label: 'Card'})
+      .with(
+        nextValueCase,
+        nextTypeCase,
+        'card',
+        'score'
+      )
+
+      q.merge({
+        $: 'nextScore',
+        label: 'PlayerScore',
+        value: '$nextValue', 
+        type: '$nextType', 
+        splittable: 0, 
+        withCards: 3
+      })
+      .merge([
+        {$: 'score'},
+        {$: 'r', type: 'player', move: 'hit', value: '$card.value', p: '$card.p'},
+        {$: 'nextScore'}
+      ])
+      .return('count(r) as count')
+
+      addedHitRels = await q.fetchRows('count')
+      
+    }while(addedHitRels > 0)
+
+    console.log("Player done");
+
   }catch(e){
     console.error(e);
   }
 }
+
+module.exports = player

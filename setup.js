@@ -3,6 +3,9 @@ const cards = require('./cards')
 const dealer = require('./dealer')
 const player = require('./player')
 const standProbs = require('./standProbs')
+const hitProbs = require('./hitProbs')
+const splitProbs = require('./splitProbs')
+const doubleProbs = require('./doubleProbs')
 
 async function setup(){
   const start = new Date()
@@ -21,6 +24,15 @@ async function setup(){
 
     //calc stand advantages
     await standProbs()
+
+    //calc hit advantages
+    await hitProbs()
+
+    //calc double advantages
+    await doubleProbs()
+
+    //calc split advantages
+    await splitProbs()
 
   } catch (e) {
     console.error(e);

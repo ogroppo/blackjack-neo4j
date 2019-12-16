@@ -14,4 +14,6 @@ module.exports = async function cards(){
   .merge({label: 'Card', value: 10, p: 0.3076923076923077})
   .merge({label: 'Card', value: 11, p: 0.07692307692307693})
   .run()
+
+  console.log("Cards done");
 }

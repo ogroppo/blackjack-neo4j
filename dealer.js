@@ -32,6 +32,8 @@ module.exports = async function dealer(){
       
     }while(addedScores > 0)
 
+    console.log("Dealer done");
+
   }catch(e){
     console.error(e);
   }
