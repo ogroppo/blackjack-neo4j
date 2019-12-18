@@ -5,15 +5,15 @@ module.exports = async function standProbs(){
   const start = new Date()
   try {
     await new Neo4jQuery()
-    .match({$: 'PlayerScore', label: 'PlayerScore'})
+    .match({$: 'PlayerScore', label: 'PlayerScore', type: "final"})
     .where(
       {$: 'PlayerScore', value: {'<=': 21}},
-      'AND',
-      {$: 'PlayerScore', withCards: {'>=': 2}}
+      'AND NOT',
+      {$: 'PlayerScore', type: 'blackJack'}
     )
     .match({$: 'DealerScore', label: 'DealerScore'})
-    .where('(:DealerScore{value:0})-[:dealer]->(DealerScore)')
-    //loseStandP
+    .where('({value:0})-[:dealer]->(DealerScore)')
+    //loseP
     .optionalMatch([
       'DealerScore',
       'dealerCards:dealer*',
@@ -21,6 +21,14 @@ module.exports = async function standProbs(){
     ])
     .where({$: 'f', value: {'>': '$PlayerScore.value'}}, 'AND', {$: 'f', value: {'>=': 17}}, 'AND', {$: 'f', value: {'<=': 21}})
     .with('sum(reduce(p = 1, card in dealerCards | p * card.p)) as loseP, PlayerScore, DealerScore')    
+    //drawP
+    .optionalMatch([
+      'DealerScore',
+      'dealerCards:dealer*',
+      'f',
+    ])
+    .where({$: 'f', value: '$PlayerScore.value'}, 'AND', {$: 'f', value: {'>=': 17}})
+    .with('sum(reduce(p = 1, card in dealerCards | p * card.p)) as drawP, loseP, PlayerScore, DealerScore')    
     //winP
     .optionalMatch([
       'DealerScore',
@@ -28,27 +36,27 @@ module.exports = async function standProbs(){
       {$: 'f', label: 'DealerScore'},
     ])
     .where([{$: 'f', value: {'>=': 17}}, 'AND', {$: 'f', value: {'<': '$PlayerScore.value'}}], 'OR', {$: 'f', value: {'>': 21}})
-    .with('sum(reduce(p = 1, card in dealerCards | p * card.p)) as winP, loseP, PlayerScore, DealerScore')
+    .with('sum(reduce(p = 1, card in dealerCards | p * card.p)) as winP, drawP, loseP, PlayerScore, DealerScore')
     //
     .merge(['PlayerScore', 'probRel:probs', 'DealerScore'])
-    .set('probRel.standAdv = (winP - loseP)')
+    .set('probRel.adv = (winP - loseP), probRel.winP = winP, probRel.loseP = loseP, probRel.drawP = drawP')
     .run()
 
     //Bust case
     await new Neo4jQuery()
-    .match({$: 'PlayerScore', label: 'PlayerScore'})
+    .match({$: 'PlayerScore', label: 'PlayerScore', type: "final"})
     .where({$: 'PlayerScore', value: {'>': 21}})
     .match({$: 'DealerScore', label: 'DealerScore'})
-    .where('(:DealerScore{value:0})-[:dealer]->(DealerScore)')
+    .where('({value:0})-[:dealer]->(DealerScore)')
     .merge(['PlayerScore', 'probRel:probs', 'DealerScore'])
-    .set('probRel.standAdv = -1')
+    .set('probRel.adv = -1, probRel.winP = 0, probRel.loseP = 1, probRel.drawP = 0')
     .run()
 
     //blackJack case
     await new Neo4jQuery()
     .match({$: 'PlayerScore', label: 'PlayerScore', type: 'blackJack'})
     .match({$: 'DealerScore', label: 'DealerScore'})
-    .where('(:DealerScore{value:0})-[:dealer]->(DealerScore)')
+    .where('({value:0})-[:dealer]->(DealerScore)')
     //loseP
     .with('0 as loseP, PlayerScore, DealerScore')
     //drawP
@@ -60,9 +68,9 @@ module.exports = async function standProbs(){
     .where({$: 'f', value: '$PlayerScore.value'})
     .with('COALESCE(card.p, 0) as drawP, loseP, PlayerScore, DealerScore')
     //winP
-    .with('1 - drawP - loseP as winP, loseP, PlayerScore, DealerScore')
+    .with('1 - drawP - loseP as winP, drawP, loseP, PlayerScore, DealerScore')
     .merge(['PlayerScore', 'probRel:probs', 'DealerScore'])
-    .set('probRel.standAdv = (winP - loseP)')
+    .set('probRel.adv = (winP - loseP), probRel.winP = winP, probRel.loseP = loseP, probRel.drawP = drawP')
     .run()
         
   } catch (e) {

@@ -9,9 +9,8 @@ module.exports = async function dealer(){
     .merge({label: 'DealerScore', value: 0, type: 'hard'})
     .run()
   
-    let cards = 0, addedScores
+    let addedScores
     do{
-      cards++
       addedScores = await new Neo4jQuery()
       .match({$: 'score', label: 'DealerScore'})
       .where(
@@ -28,7 +27,7 @@ module.exports = async function dealer(){
         {$: 'nextScore'}
       ])
       .return({$: 'count(r)', as: 'count'})
-      .fetchRow('count')      
+      .fetchOne('count')      
       
     }while(addedScores > 0)
 

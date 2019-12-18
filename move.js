@@ -1,18 +1,18 @@
 require('dotenv').config()
 const Neo4jQuery = require('fluent-neo4j')
 
-async function move(){
+module.exports = async function move(){
   const start = new Date()
   try {
     await new Neo4jQuery()
     .match([
-      {$: 'PlayerScore', label: 'PlayerScore'},
-      {$: 'probsRel', type: 'probs'},
+      {$: 'PlayerScore', label: 'PlayerScore', withCards: 2},
+      {$: 'standProbs', type: 'probs'},
       {$: 'DealerScore', label: 'DealerScore'}
     ])
     .with(
       'PlayerScore',
-      'probsRel',
+      'standProbs',
       'DealerScore',
       'floor(probsRel.standAdv * 100000)/100000 as standAdv',
       'floor(probsRel.hitAdv * 100000)/100000 as hitAdv',
@@ -21,9 +21,9 @@ async function move(){
     )
     .with(`
     CASE
-      WHEN PlayerScore.splittable > 0 AND splitAdv > 0 AND splitAdv > doubleAdv AND splitAdv > hitAdv AND splitAdv > standAdv
+      WHEN PlayerScore.splittable > 0 AND splitAdv >= doubleAdv AND splitAdv > hitAdv AND splitAdv >= standAdv
         THEN 'P'
-      WHEN doubleAdv > 0 AND doubleAdv > hitAdv AND doubleAdv > standAdv
+      WHEN PlayerScore.withCards = 2 AND doubleAdv > hitAdv AND doubleAdv > standAdv
         THEN 'D'
       WHEN hitAdv >= standAdv
         THEN 'H'
@@ -40,5 +40,3 @@ async function move(){
 
   console.log("Move computed in", (new Date() - start)/1000, 'seconds');
 }
-
-move()

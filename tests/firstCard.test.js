@@ -7,7 +7,7 @@ test('First card', async t => {
   .match({$: 'score', withCards: 1})
   .return('score.value as value')
   .orderBy('value')
-  .fetchRows('value')
+  .fetch('value')
 
 	t.is(scores.length, 10)
 	t.is(scores[0], 2)

@@ -8,7 +8,7 @@ test('splittable', async t => {
   .where({$: 'score', splittable: {'>': 0}})
   .return('score')
   .orderBy('score.value')
-  .fetchRows('score')
+  .fetch('score')
 
 	t.is(allscores.length, 10)
 	t.is(allscores[0].value, 4)
@@ -19,7 +19,7 @@ test('splittable', async t => {
   .where({$: 'score', splittable: {'>': 0}})
   .return('score')
   .orderBy('score.splittable')
-  .fetchRows('score')
+  .fetch('score')
 
 	t.is(twelveScores.length, 2)
 	t.is(twelveScores[0].splittable, 6)
@@ -31,7 +31,7 @@ test('no splittable has no split next', async t => {
   .match({$: 'score', splittable: 0})
   .match(['score', 'move:player{move:"split"}', 'next'])
   .return('count(move) as count')
-  .fetchRow('count')
+  .fetchOne('count')
 
 	t.is(count, 0)
 });

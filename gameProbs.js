@@ -7,32 +7,29 @@ async function gameProbs(){
     let adv = await new Neo4jQuery()
     .match([
       {label: 'PlayerScore', value:0},
-      {$: 'cards', type: 'player', depth: '2'},
+      {$: 'playerCards', type: 'player', depth: '2'},
       {label: 'PlayerScore'},
       {$: 'probRel', type: 'probs'},
       {label: 'DealerScore'}
     ])
+    .where({$: 'probRel', move: 'S'}, 'OR', {$: 'probRel', move: 'D'})
     .match([
       {label: 'DealerScore', value:0},
-      {$: 'card', type: 'dealer'},
+      {$: 'dealerCard', type: 'dealer'},
       'DealerScore'
     ])
-    .with('probRel', 'cards', 'card.p as dealerP')
-    //.where({$: 'probRel', move: 'S'}, 'OR', {$: 'probRel', move: 'D'})
-    .with(`CASE
-      WHEN probRel.move = 'S'
-        THEN probRel.standAdv
-      WHEN probRel.move = 'D'
-        THEN probRel.doubleAdv
-      WHEN probRel.move = 'P'
-        THEN probRel.splitAdv
-      WHEN probRel.move = 'H'
-        THEN probRel.hitAdv
-    END as adv`,'cards', 'probRel', 'dealerP')
-    .with('sum(reduce(p = 1, card in cards | p * card.p) * adv * dealerP) as adv')
-    .return('adv')
+    // .with('probRel', 'cards', 'card.p as dealerP')
+    // .with(`CASE
+    //   WHEN probRel.move = 'S'
+    //     THEN probRel.standAdv
+    //   WHEN probRel.move = 'D'
+    //     THEN probRel.doubleAdv
+    // END as adv`,'cards', 'probRel', 'dealerP')
+    // .with('sum(reduce(p = 1, card in cards | p * card.p) * adv * dealerP) as adv')
+    .with('reduce(p = 1, card in playerCards | p * card.p) * dealerCard.p as adv')
+    .return('sum(adv) as adv')
     .log()
-    .fetchRow('adv')
+    .fetch('adv')
 
     console.log({adv});
        

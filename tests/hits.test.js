@@ -17,7 +17,18 @@ test('Every card has a hit', async t => {
     ['PlayerScore',':player{move:"hit"}','']
   )
   .return('PlayerScore')
-  .fetchRows()
+  .log()
+  .fetch()  
 
 	t.is(scores.length, 0)
+});
+
+test('Every bust has no hit', async t => {
+  let hits = await new Neo4jQuery()
+  .match({$: 'PlayerScore', label: 'PlayerScore', type: "bust"})
+  .match(['PlayerScore','r:player{move:"hit"}',''])
+  .return('r')
+  .fetch()
+
+	t.is(hits.length, 0)
 });

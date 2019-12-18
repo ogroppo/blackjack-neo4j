@@ -6,7 +6,7 @@ test('Only one Score clause no args', async t => {
   let scores = await new Neo4jQuery()
   .match({$: 'score', type: 'blackJack'})
   .return('score')
-  .fetchRows()
+  .fetch()
 
 	t.is(scores.length, 1)
 });
@@ -16,17 +16,17 @@ test('2 scores before', async t => {
   .match({$: 'blackJack', type: 'blackJack'})
   .match([{$: 'p'}, 'prev:PlayerScore', 'card:player', 'blackJack'])
   .return('prev')
-  .fetchRows()
+  .fetch()
 
 	t.is(prevScores.length, 2)
 });
 
-test('No scores after blackjack', async t => {
+test('No hits after blackjack', async t => {
   let nextScores = await new Neo4jQuery()
   .match({$: 'score', type: 'blackJack'})
-  .match([{$: 'p'}, 'score', ':player', ':PlayerScore'])
-  .return('p')
-  .fetchRows()
+  .match(['score', 'r:player{move:"hit"}', ':PlayerScore'])
+  .return('r')
+  .fetch()
 
 	t.is(nextScores.length, 0)
 });

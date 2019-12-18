@@ -2,7 +2,7 @@ require('dotenv').config()
 const Neo4jQuery = require('fluent-neo4j')
 const fs = require('fs');
 
-async function cheat(){
+module.exports = async function cheat(){
   const start = new Date()
   try {
     const results = await new Neo4jQuery()
@@ -20,7 +20,7 @@ async function cheat(){
     .return('*')
     .orderBy('PlayerScore.splittable, PlayerScore.type, PlayerScore.value')
     .log()
-    .fetchRows()
+    .fetch()
 
     //console.log(results);
     
@@ -50,5 +50,3 @@ async function cheat(){
 
   console.log("Move computed in", (new Date() - start)/1000, 'seconds');
 }
-
-cheat()

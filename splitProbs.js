@@ -8,7 +8,7 @@ module.exports = async function splitProbs(){
     .match({$: 'PlayerScore', label: 'PlayerScore'})
     .where({$: 'PlayerScore', splittable: {'>': 0}})
     .match({$: 'DealerScore', label: 'DealerScore'})
-    .where('(:DealerScore{value:0})-[:dealer]->(DealerScore)')
+    .where('({value:0})-[:dealer]->(DealerScore)')
     .match([
       'PlayerScore',
       'card:player{move:"split"}',

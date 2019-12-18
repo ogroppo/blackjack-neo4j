@@ -7,7 +7,7 @@ test('Second card', async t => {
   .match({$: 'score', withCards: 2})
   .returnDistinct('score.type as type')
   .orderBy('type')
-  .fetchRows('type')
+  .fetch('type')
 
 	t.is(scores.length, 4)
 	t.is(scores[0], 'aceSplit')

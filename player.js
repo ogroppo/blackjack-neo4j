@@ -9,67 +9,94 @@ async function player(){
     .merge({label: 'PlayerScore', value: 0, type: 'hard'})
     .run()
 
-    //Hits
-    let cards = 0, addedScores
-    do{
-      cards += 1;
-      const q = new Neo4jQuery()
-      .match({$: 'score', label: 'PlayerScore'})
-      .where(
-        {$: 'score', value: {'<=': 21}}, 
-        'AND NOT',
-        {$: 'score', type: 'blackJack'},
-        'AND NOT',
-        [{$: 'score'}, {type: 'player'}, {}]
-      )
-      .match({$: 'card', label: 'Card'})
-      .with(
-        nextValueCase,
-        nextTypeCase,
-        'card',
-        'score',
-        '0 as splittable'
-      )
+    //First card
+    await new Neo4jQuery()
+    .match({$: 'score', label: 'PlayerScore', value: 0})
+    .match({$: 'card', label: 'Card'})
+    .with(
+      nextValueCase,
+      nextTypeCase,
+      'card',
+      'score',
+    )
+    .merge({
+      $: 'nextScore',
+      label: 'PlayerScore',
+      value: '$nextValue', 
+      type: '$nextType', 
+      withCards: 1
+    })
+    .merge([
+      {$: 'score'},
+      {$: 'r', type: 'player', move: 'hit', value: '$card.value', p: '$card.p'},
+      {$: 'nextScore'}
+    ])
+    .run()
 
-      if(cards === 2)
-        q.with(
-          `(CASE
-            WHEN nextValue = 21
-              THEN 'blackJack'
-            ELSE nextType
-          END) as nextType`,
-          `(CASE
-            WHEN score.value = card.value
-              THEN card.value
-            ELSE 0
-          END) as splittable`,
-          'nextValue', 
-          'card',
-          'score'
-        )
+    console.log("First card done");
+    
 
-      q.merge({
-        $: 'nextScore',
-        label: 'PlayerScore',
-        value: '$nextValue', 
-        type: '$nextType', 
-        splittable: '$splittable', 
-        withCards: cards > 2 ? 3 : cards
-      })
-      .merge([
-        {$: 'score'},
-        {$: 'r', type: 'player', move: 'hit', value: '$card.value', p: '$card.p'},
-        {$: 'nextScore'}
-      ])
-      .return('count(nextScore) as count')
+    //Second card
+    await new Neo4jQuery()
+    .match({$: 'score', label: 'PlayerScore', withCards: 1})
+    .match({$: 'card', label: 'Card'})
+    .with(
+      nextValueCase,
+      nextTypeCase,
+      `(CASE
+        WHEN score.value = card.value
+          THEN card.value
+        ELSE 0
+      END) as splittable`,
+      'card',
+      'score',
+    )
+    .merge({
+      $: 'nextScore',
+      label: 'PlayerScore',
+      value: '$nextValue', 
+      type: '$nextType', 
+      withCards: 2,
+      splittable: '$splittable', 
+    })
+    .merge([
+      {$: 'score'},
+      {$: 'r', type: 'player', move: 'hit', value: '$card.value', p: '$card.p'},
+      {$: 'nextScore'}
+    ])
+    .run()
 
-      addedScores = await q.fetchRows('count')
-      
-    }while(addedScores > 0)
+    console.log("Second card done");
+
+    //Doubles
+    await new Neo4jQuery()
+    .match({$: 'score', label: 'PlayerScore', withCards: 2})
+    .where([{$: 'score', type: 'soft'}, 'OR', {$: 'score', type: 'hard'}])
+    .match({$: 'card', label: 'Card'})
+    .with(
+      nextValueCase,
+      'card',
+      'score',
+    )
+    .merge({
+      $: 'nextScore',
+      label: 'PlayerScore',
+      value: '$nextValue', 
+      type: 'doubled', 
+      withCards: 3
+    })
+    .merge([
+      {$: 'score'},
+      {$: 'r', type: 'player', move: 'double', value: '$card.value', p: '$card.p'},
+      {$: 'nextScore'}
+    ])
+    .run()
+
+    console.log("Doubles card done");
 
     //Splits
     await new Neo4jQuery()
-    .match({$: 'score', label: 'PlayerScore'})
+    .match({$: 'score', label: 'PlayerScore', withCards: 2})
     .where({$: 'score', splittable: {'>': 0}})
     .match({$: 'card', label: 'Card'})
     .with(
@@ -103,34 +130,30 @@ async function player(){
     ])
     .run()
 
-    //Cover new scores created by split
-    let addedHitRels
+    console.log("Splits card done");
+
+    //Hits
+    let addedScores
     do{
-      const q = new Neo4jQuery()
+      addedScores = await new Neo4jQuery()
       .match({$: 'score', label: 'PlayerScore'})
       .where(
-        {$: 'score', value: {'<=': 21}}, 
+        [{$: 'score', type: 'soft'}, 'OR', {$: 'score', type: 'hard'}],
         'AND NOT',
-        {$: 'score', type: 'blackJack'},
-        'AND NOT',
-        {$: 'score', type: 'aceSplit'},
-        'AND NOT',
-        [{$: 'score'}, {type: 'player'}, {}]
+        [{$: 'score'}, {type: 'player', move: "hit"}, {}]
       )
       .match({$: 'card', label: 'Card'})
       .with(
         nextValueCase,
         nextTypeCase,
         'card',
-        'score'
+        'score',
       )
-
-      q.merge({
+      .merge({
         $: 'nextScore',
         label: 'PlayerScore',
         value: '$nextValue', 
         type: '$nextType', 
-        splittable: 0, 
         withCards: 3
       })
       .merge([
@@ -139,10 +162,33 @@ async function player(){
         {$: 'nextScore'}
       ])
       .return('count(r) as count')
+      .fetchOne('count')
 
-      addedHitRels = await q.fetchRows('count')
+      console.log({addedScores});
       
-    }while(addedHitRels > 0)
+      
+    }while(addedScores > 0)
+
+    console.log("Hits card done");
+
+    //Final scores
+    await new Neo4jQuery()
+    .match({$: 'score', label: 'PlayerScore'})
+    .where({$: 'score', withCards: {'>=': 2}})
+    .merge({
+      $: 'finalScore',
+      label: 'PlayerScore',
+      value: '$score.value', 
+      type: 'final', 
+    })
+    .merge([
+      {$: 'score'},
+      {$: 'r', type: 'player', move: 'stand', p: 1},
+      {$: 'finalScore'}
+    ])
+    .run()
+
+    console.log("Final scores done");
 
     console.log("Player done");
 
