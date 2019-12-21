@@ -68,32 +68,6 @@ async function player(){
 
     console.log("Second card done");
 
-    //Doubles
-    await new Neo4jQuery()
-    .match({$: 'score', label: 'PlayerScore', withCards: 2})
-    .where([{$: 'score', type: 'soft'}, 'OR', {$: 'score', type: 'hard'}])
-    .match({$: 'card', label: 'Card'})
-    .with(
-      nextValueCase,
-      'card',
-      'score',
-    )
-    .merge({
-      $: 'nextScore',
-      label: 'PlayerScore',
-      value: '$nextValue', 
-      type: 'doubled', 
-      withCards: 3
-    })
-    .merge([
-      {$: 'score'},
-      {$: 'r', type: 'player', move: 'double', value: '$card.value', p: '$card.p'},
-      {$: 'nextScore'}
-    ])
-    .run()
-
-    console.log("Doubles card done");
-
     //Splits
     await new Neo4jQuery()
     .match({$: 'score', label: 'PlayerScore', withCards: 2})
@@ -121,7 +95,7 @@ async function player(){
       value: "$nextValue", 
       type: '$nextType', //if type: aceSplit it will not continue in the hit tree
       splittable: 0, //allow one split only allowed
-      withCards: 2 //e.g. allow to double
+      withCards: 2 //i.e. return to a state that can double
     }) 
     .merge([
       'score',
@@ -164,8 +138,7 @@ async function player(){
       .return('count(r) as count')
       .fetchOne('count')
 
-      console.log({addedScores});
-      
+      //console.log({addedScores});
       
     }while(addedScores > 0)
 
@@ -174,7 +147,7 @@ async function player(){
     //Final scores
     await new Neo4jQuery()
     .match({$: 'score', label: 'PlayerScore'})
-    .where({$: 'score', withCards: {'>=': 2}})
+    .where({$: 'score', withCards: {'>=': 2}}, 'AND NOT', {$: 'score', type: 'blackJack'})
     .merge({
       $: 'finalScore',
       label: 'PlayerScore',
@@ -183,7 +156,24 @@ async function player(){
     })
     .merge([
       {$: 'score'},
-      {$: 'r', type: 'player', move: 'stand', p: 1},
+      {$: 'r', type: 'player', move: 'stand'},
+      {$: 'finalScore'}
+    ])
+    .run()
+
+    //BlackJack
+    await new Neo4jQuery()
+    .match({$: 'score', label: 'PlayerScore', type: 'blackJack'})
+    .merge({
+      $: 'finalScore',
+      label: 'PlayerScore',
+      value: 21, 
+      blackJack: true,
+      type: 'final', 
+    })
+    .merge([
+      {$: 'score'},
+      {$: 'r', type: 'player', move: 'stand'},
       {$: 'finalScore'}
     ])
     .run()

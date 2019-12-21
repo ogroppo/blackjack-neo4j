@@ -9,9 +9,16 @@ test('Final Scores card', async t => {
   .orderBy('value')
   .fetch('value')
 
-	t.is(scores.length, 28)
+	t.is(scores.length, 29)
 	t.is(scores[0], 4)
-	t.is(scores[27], 31)
+  t.is(scores[28], 31)
+  
+  let blackJackCount = await new Neo4jQuery()
+  .match({$: 'score', type: 'final', blackJack: true})
+  .return('count(score) as count')
+  .fetchOne('count')
+
+	t.is(blackJackCount, 1)
 });
 
 test('Busts', async t => {

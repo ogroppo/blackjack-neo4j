@@ -4,13 +4,10 @@ const Neo4jQuery = require('fluent-neo4j')
 module.exports = async function standProbs(){
   const start = new Date()
   try {
+    console.log("Doing stand probs");
     await new Neo4jQuery()
     .match({$: 'PlayerScore', label: 'PlayerScore', type: "final"})
-    .where(
-      {$: 'PlayerScore', value: {'<=': 21}},
-      'AND NOT',
-      {$: 'PlayerScore', type: 'blackJack'}
-    )
+    .where({$: 'PlayerScore', value: {'<=': 21}})
     .match({$: 'DealerScore', label: 'DealerScore'})
     .where('({value:0})-[:dealer]->(DealerScore)')
     //loseP
@@ -42,6 +39,8 @@ module.exports = async function standProbs(){
     .set('probRel.adv = (winP - loseP), probRel.winP = winP, probRel.loseP = loseP, probRel.drawP = drawP')
     .run()
 
+    console.log("Doing bust probs");
+
     //Bust case
     await new Neo4jQuery()
     .match({$: 'PlayerScore', label: 'PlayerScore', type: "final"})
@@ -52,9 +51,11 @@ module.exports = async function standProbs(){
     .set('probRel.adv = -1, probRel.winP = 0, probRel.loseP = 1, probRel.drawP = 0')
     .run()
 
+    console.log("Doing blackjack probs");
+
     //blackJack case
     await new Neo4jQuery()
-    .match({$: 'PlayerScore', label: 'PlayerScore', type: 'blackJack'})
+    .match({$: 'PlayerScore', label: 'PlayerScore', type: 'final', blackJack: true})
     .match({$: 'DealerScore', label: 'DealerScore'})
     .where('({value:0})-[:dealer]->(DealerScore)')
     //loseP

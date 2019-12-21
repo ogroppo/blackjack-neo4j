@@ -3,9 +3,6 @@ const cards = require('./cards')
 const dealer = require('./dealer')
 const player = require('./player')
 const standProbs = require('./standProbs')
-const hitProbs = require('./hitProbs')
-const splitProbs = require('./splitProbs')
-const doubleProbs = require('./doubleProbs')
 const move = require('./move')
 const cheat = require('./cheat')
 
@@ -27,20 +24,11 @@ async function setup(){
     //calc stand advantages
     await standProbs()
 
-    // //calc hit advantages
-    // await hitProbs()
+    //calc best move
+    await move()
 
-    // //calc double advantages
-    // await doubleProbs()
-
-    // //calc split advantages
-    // await splitProbs()
-
-    // //calc best move
-    // await move()
-
-    // //generate cheat sheet
-    // await cheat()
+    //generate cheat sheet
+    await cheat()
 
   } catch (e) {
     console.error(e);

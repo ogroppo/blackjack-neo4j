@@ -5,11 +5,11 @@
   "dependencies": {
     "ava": "^2.4.0",
     "dotenv": "^8.2.0",
-    "fluent-neo4j": "^0.4.5"
+    "fluent-neo4j": "^0.4.6"
   },
   "scripts": {
     "setup": "node setup.js",
-    "cheat": "node cheat.js",
+    "advantage": "node gameAdv.js",
     "test": "ava"
   },
   "eslintConfig": {
